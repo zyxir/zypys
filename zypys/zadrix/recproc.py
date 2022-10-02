@@ -253,7 +253,8 @@ def main():
     logging.basicConfig(level=logging.INFO)
     srcdir = args.srcdir
     targetdir = os.path.join(
-        os.path.dirname(srcdir), os.path.basename(srcdir) + '_archive'
+        os.path.dirname(srcdir),
+        os.path.basename(os.path.abspath(srcdir)) + '_archive'
     )
     processor = RecordProcessor(srcdir, targetdir)
     processor.copy_timelapses()

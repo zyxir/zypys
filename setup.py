@@ -1,6 +1,6 @@
 """包創建腳本。"""
 
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
     name='zypys',
@@ -8,5 +8,5 @@ setup(
     description='Zyxir\'s personal Python scripts.',
     author='Eric Zyxir Zhuo Chen',
     author_email='zyxirchen@outlook.com',
-    packages=['zypys'],
+    packages=find_packages()
 )
