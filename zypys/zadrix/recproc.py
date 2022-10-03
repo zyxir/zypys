@@ -38,7 +38,7 @@ class RecordProcessor:
     # 默認的提取命令。
     CMD_EXTRACT = "ffmpeg -i {input} -loglevel warning" + \
         " -preset medium -c:v libx264 -crf 18 " + \
-        " -x264-params keyint=20" + \
+        " -x264-params keyint=30" + \
         " -ss {start} -to {end}" + \
         " {output}"
 
