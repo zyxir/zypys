@@ -14,7 +14,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 
 
 class RecordProcessor:
@@ -47,15 +46,6 @@ class RecordProcessor:
 
     def __init__(self, srcdir: str, targetdir: str):
         """初始化䤸像處理器。"""
-        # 檢查目標目䤸是否存在。如不存在，則嘗試創建之。
-
-        if not os.path.isdir(targetdir):
-            os.mkdir(targetdir)
-            logging.info(
-                'Target directory "%s" has been created.', targetdir
-            )
-        self.targetdir = targetdir
-
         # 提取所有錄像文件之信息。
 
         self.srcdir = srcdir
@@ -81,7 +71,7 @@ class RecordProcessor:
             self.index_maxlen = max(indexlens)  # 最長的編號位數，僅用於打印。
             logging.info('Searching complete, %d records found.', self.num)
         except FileNotFoundError:
-            logging.info('Source directory not found.')
+            raise FileNotFoundError('Source directory not found.')
 
         # 對所有䤸像文件按照編號排序。
 
@@ -92,6 +82,15 @@ class RecordProcessor:
             self.fnames[i] = elem[1]
             self.indices[i] = elem[2]
         logging.info('Records reordered.')
+
+        # 檢查目標目䤸是否存在。如不存在，則嘗試創建之。
+
+        if not os.path.isdir(targetdir):
+            os.mkdir(targetdir)
+            logging.info(
+                'Target directory "%s" has been created.', targetdir
+            )
+        self.targetdir = targetdir
 
     def __iter__(self):
         """此類的迭代器。"""
@@ -165,6 +164,8 @@ class RecordProcessor:
         clips_FULLINDEX_TITLE.mov
 
         其中，FULLINDEX 爲補零後的 INDEX。文件將被存爲 .mov 格式，最適合剪輯。
+
+        EXTRACT_TXT 文件本身也會被複製到新文件夾中。
         """
         # 提取 EXTRACT_TXT 文件。
 
@@ -172,6 +173,16 @@ class RecordProcessor:
         with open(extract_txt, newline='', encoding='utf-8') as f:
             reader = csv.reader(f, delimiter=' ')
             data = list(reader)
+
+        # 將 EXTRACT_TXT 本身複製到新文件夾。
+
+        target_extract_txt = os.path.join(self.targetdir, self.EXTRACT_TXT)
+        if not os.path.exists(target_extract_txt):
+            shutil.copy(extract_txt, self.targetdir)
+            logging.info(
+                '%s has been copied to the target directory.'
+                % self.EXTRACT_TXT
+            )
 
         # 依次進行提取任務。
 
