@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zypys"
+version = "0.0.1"
+authors = [
+  { name="Eric Zhuo Chen", email="zyxirchen@outlook.com" },
+]
+description = "A package of Zyxir's personal library and scripts."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pip-tools",
+  "pytest",
+  "python-lsp-server",
+  "pylsp-mypy",
+  "python-lsp-black",
+  "pylsp-rope",
+  "python-lsp-ruff",
+]
+
+[project.urls]
+"Homepage" = "https://git.ustc.edu.cn/zyxir/berutils"
