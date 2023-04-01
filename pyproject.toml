@@ -32,3 +32,6 @@ dev = [
 
 [project.urls]
 "Homepage" = "https://git.ustc.edu.cn/zyxir/berutils"
+
+[tool.mypy]
+ignore_missing_imports = true
