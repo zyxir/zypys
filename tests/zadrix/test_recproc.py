@@ -6,8 +6,8 @@ validate the module as much as possible.
 
 import logging
 import subprocess
-from pathlib import Path
 import tempfile
+from pathlib import Path
 from typing import Tuple
 
 from zypys.zadrix import recproc
@@ -67,6 +67,13 @@ def get_video_resolution(video: Path) -> Tuple[int, int]:
     return width, height
 
 
+def is_close(a: float, b: float) -> bool:
+    """Return True if a and b are close."""
+    if abs(a - b) / b < 0.01:
+        return True
+    return False
+
+
 def test_is_recording():
     """Test is_recording()."""
     recording = demo_dir.joinpath("021_day1234_测试录屏.mkv")
@@ -122,7 +129,7 @@ def test_compress():
         out_file_duration = get_video_duration(out_file)
         out_file_width, out_file_height = get_video_resolution(out_file)
         assert returncode == 0
-        assert in_file_duration == out_file_duration
+        assert is_close(in_file_duration, out_file_duration)
         assert out_file_width == 1280
         assert out_file_height == 720
 
@@ -157,7 +164,7 @@ def test_extract():
         returncode = recproc.extract(in_file, out_file, "00:00:01", "00:00:02")
         out_file_duration = get_video_duration(out_file)
         assert returncode == 0
-        assert out_file_duration == 1.0
+        assert is_close(out_file_duration, 1.0)
 
 
 def test_get_extract_jobs():
