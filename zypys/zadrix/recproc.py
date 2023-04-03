@@ -19,6 +19,7 @@ import datetime
 import logging
 import re
 import subprocess
+from itertools import starmap
 from pathlib import Path
 from typing import Tuple
 
@@ -107,7 +108,7 @@ def compress(in_file: Path, out_file: Path) -> int:
     return result.returncode
 
 
-def compress_all(in_dir: Path, out_dir: Path, maxnum: int = 0):
+def compress_all(in_dir: Path, out_dir: Path, maxnum: int = 0) -> int:
     """Compress all recordings in in_dir, printing info.
 
     Compressed recordings are put into out_dir.
@@ -125,6 +126,10 @@ def compress_all(in_dir: Path, out_dir: Path, maxnum: int = 0):
     for i, (in_file, out_file) in enumerate(zip(in_files, out_files)):
         if i >= maxnum:
             break
+        # Skip if output already exist.
+        if out_file.exists():
+            print(f'Skip existing file "{out_file.name}".')
+            continue
         # Print info without newline.
         now = datetime.datetime.now().strftime("%H:%M")
         info = f'Start compressing "{in_file.name}" at {now} ({i}/{maxnum})...'
@@ -153,8 +158,16 @@ def compress_all(in_dir: Path, out_dir: Path, maxnum: int = 0):
 
 
 def read_extract_txt(
-    in_dir: Path, fname: str
+    in_dir: Path, fname: str = "extract.txt"
 ) -> Tuple[list[int], list[str], list[str], list[str]]:
+    """Read extract.txt, load its contents into 4 lists.
+
+    The four lists returned are:
+    index: The indices of the recordings to extract.
+    start: The starting timestamps of the extraction.
+    end: Tne ending timestamps of the extraction.
+    title: The titles of the extracted clips.
+    """
     extract_txt = in_dir.joinpath(fname)
     try:
         with open(extract_txt, newline="", encoding="utf-8") as f:
@@ -172,6 +185,112 @@ def read_extract_txt(
     except Exception:
         logging.error('Failed to read "%s"', extract_txt)
         return [], [], [], []
+
+
+def extract(in_file: Path, out_file: Path, start: str, end: str) -> int:
+    """Extract one file with FFmpeg.
+
+    Arguments start and end are timestamps.
+
+    Return the return code.
+    """
+    cmd = [
+        "ffmpeg",
+        "-i",
+        str(in_file),
+        "-loglevel",
+        "warning",
+        "-preset",
+        "medium",
+        "-c:v",
+        "libx265",
+        "-crf",
+        "23",
+        "-x265-params",
+        "keyint=60",
+        "-ss",
+        start,
+        "-to",
+        end,
+        str(out_file),
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.stdout is not None:
+        for line in result.stdout.splitlines():
+            print(line)
+    return result.returncode
+
+
+def get_extract_jobs(
+    in_dir: Path, out_dir: Path
+) -> Tuple[list[Path], list[Path], list[str], list[str]]:
+    """Get the lists describing the extraction.
+
+    Return several lists:
+    in_files: The input files.
+    out_files: The output files.
+    start: The starting timestamps.
+    end: The ending timestamps.
+    """
+    index, start, end, title = read_extract_txt(in_dir)
+    recordings = get_recordings(in_dir)
+
+    def find_recording_with_index(index: int) -> Path:
+        return list(
+            filter(lambda recording: get_index(recording) == index, recordings)
+        )[0]
+
+    in_files = list(map(find_recording_with_index, index))
+    out_files = list(
+        starmap(
+            lambda i, t: out_dir.joinpath(f"clip_{i:03}_{t}.mp4"),
+            zip(index, title),
+        )
+    )
+    return in_files, out_files, start, end
+
+
+def extract_all(in_dir: Path, out_dir: Path, maxnum: int = 0) -> int:
+    """Extract all recordings in in_dir, printing info.
+
+    Extracted recordings are put into out_dir.
+
+    Extract maxnum recordings at most.  If maxnum is 0, extract all recordings.
+
+    Return 1 if interrupted, or 0 otherwise.
+    """
+    in_files, out_files, start, end = get_extract_jobs(in_dir, out_dir)
+    if maxnum == 0:
+        maxnum = len(in_files)
+    print(f"{len(in_files)} extraction jobs found, {maxnum} recordings to extract.")
+    for i, (in_file, out_file, start_i, end_i) in enumerate(
+        zip(in_files, out_files, start, end)
+    ):
+        if i >= maxnum:
+            break
+        # Skip if output already exist.
+        if out_file.exists():
+            print(f'Skip existing file "{out_file.name}".')
+            continue
+        # Print info without newline.
+        now = datetime.datetime.now().strftime("%H:%M")
+        info = f'Start extracting "{in_file.name}" at {now} ({i+1}/{maxnum})...'
+        print(info, end="", flush=True)
+        info_finished = False
+        try:
+            # Extract the file.
+            extract(in_file, out_file, start_i, end_i)
+            # Finish the info.
+            print("done")
+            info_finished = True
+        except KeyboardInterrupt:
+            # When extracting is interrupted, delete the incomplete output file.
+            if not info_finished:
+                print("")
+            print("Extracting interrupted by Ctrl-C.")
+            out_file.unlink(missing_ok=True)
+            return 1
+    return 0
 
 
 if __name__ == "__main__":

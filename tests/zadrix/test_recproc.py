@@ -147,3 +147,41 @@ def test_read_extract_txt():
     assert start == ["00:00:00", "00:00:02"]
     assert end == ["00:00:01", "00:00:03"]
     assert title == ["第一秒片段", "第三秒片段"]
+
+
+def test_extract():
+    """Test extract()."""
+    in_file = demo_dir.joinpath("021_day1234_测试录屏.mkv")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        out_file = Path(temp_dir).joinpath("tmp.mov")
+        returncode = recproc.extract(in_file, out_file, "00:00:01", "00:00:02")
+        out_file_duration = get_video_duration(out_file)
+        assert returncode == 0
+        assert out_file_duration == 1.0
+
+
+def test_get_extract_jobs():
+    """Test get_extract_jobs()."""
+    in_dir = demo_dir
+    with tempfile.TemporaryDirectory() as temp_dir:
+        out_dir = Path(temp_dir)
+        in_files, out_files, start, end = recproc.get_extract_jobs(in_dir, out_dir)
+        assert in_files[0] == in_dir.joinpath("021_day1234_测试录屏.mkv")
+        assert in_files[1] == in_dir.joinpath("023_day4321_又一个测试录屏.mkv")
+        assert out_files[0] == out_dir.joinpath("clip_021_第一秒片段.mp4")
+        assert out_files[1] == out_dir.joinpath("clip_023_第三秒片段.mp4")
+        assert start == ["00:00:00", "00:00:02"]
+        assert end == ["00:00:01", "00:00:03"]
+
+
+def test_extract_all():
+    """Test extract_all()."""
+    in_dir = demo_dir
+    with tempfile.TemporaryDirectory() as temp_dir:
+        out_dir = Path(temp_dir)
+        recproc.extract_all(in_dir, out_dir)
+        assert len(list(out_dir.iterdir())) == 2
+    with tempfile.TemporaryDirectory() as temp_dir:
+        out_dir = Path(temp_dir)
+        recproc.extract_all(in_dir, out_dir, maxnum=1)
+        assert len(list(out_dir.iterdir())) == 1
