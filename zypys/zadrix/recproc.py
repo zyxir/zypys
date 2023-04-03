@@ -20,7 +20,7 @@ import logging
 import re
 import subprocess
 from pathlib import Path
-from typing import List, Tuple
+from typing import Tuple
 
 # ------------------------------------------------------------------------------
 # File recognition
@@ -57,7 +57,7 @@ def get_index(file: Path) -> int:
     return int(match.group(1))
 
 
-def get_recordings(directory: Path) -> List[Path]:
+def get_recordings(directory: Path) -> list[Path]:
     """Get the list of recordings contained in a directory.
 
     Recordings are sorted with their indices.
@@ -67,7 +67,7 @@ def get_recordings(directory: Path) -> List[Path]:
     return recordings
 
 
-def get_timelapses(directory: Path) -> List[Path]:
+def get_timelapses(directory: Path) -> list[Path]:
     """Get the list of timelapses contained in a directory."""
     return list(filter(is_timelapse, directory.iterdir()))
 
@@ -77,17 +77,34 @@ def get_timelapses(directory: Path) -> List[Path]:
 # ------------------------------------------------------------------------------
 
 
-def compress(in_file: Path, out_file: Path):
-    """Compress one file with FFmpeg."""
-    cmd = (
-        f'ffmpeg -i "{in_file}" -loglevel warning '
-        "-preset medium -c:v libx265 -crf 28 "
-        f'-s 1280x720 -filter:v fps=30 "{out_file}"'
-    )
+def compress(in_file: Path, out_file: Path) -> int:
+    """Compress one file with FFmpeg.
+
+    Return the return code.
+    """
+    cmd = [
+        "ffmpeg",
+        "-i",
+        str(in_file),
+        "-loglevel",
+        "warning",
+        "-preset",
+        "medium",
+        "-c:v",
+        "libx265",
+        "-crf",
+        "28",
+        "-s",
+        "1280x720",
+        "-filter:v",
+        "fps=30",
+        str(out_file),
+    ]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.stderr is not None:
-        for line in result.stderr.splitlines():
-            logging.warning(line)
+    if result.stdout is not None:
+        for line in result.stdout.splitlines():
+            print(line)
+    return result.returncode
 
 
 def compress_all(in_dir: Path, out_dir: Path, maxnum: int = 0):
@@ -137,15 +154,15 @@ def compress_all(in_dir: Path, out_dir: Path, maxnum: int = 0):
 
 def read_extract_txt(
     in_dir: Path, fname: str
-) -> Tuple[List[int], List[str], List[str], List[str]]:
+) -> Tuple[list[int], list[str], list[str], list[str]]:
     extract_txt = in_dir.joinpath(fname)
     try:
         with open(extract_txt, newline="", encoding="utf-8") as f:
             reader = csv.reader(f, delimiter=" ")
-            index: List[int] = []
-            start: List[str] = []
-            end: List[str] = []
-            title: List[str] = []
+            index: list[int] = []
+            start: list[str] = []
+            end: list[str] = []
+            title: list[str] = []
             for line in reader:
                 index.append(int(line[0]))
                 start.append(line[1])
@@ -153,11 +170,9 @@ def read_extract_txt(
                 title.append(line[3])
             return index, start, end, title
     except Exception:
-        logging.error("Failed to read \"%s\"", extract_txt)
+        logging.error('Failed to read "%s"', extract_txt)
         return [], [], [], []
 
 
 if __name__ == "__main__":
-    in_dir = Path("d:/zadrix-records/500days/")
-    out_dir = Path("tmp")
-    compress_all(in_dir, out_dir)
+    pass
