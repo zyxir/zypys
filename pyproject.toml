@@ -28,6 +28,8 @@ dev = [
   "python-lsp-black",
   "pylsp-rope",
   "python-lsp-ruff",
+  "pyls-isort",
+  "pyls-memestra",
 ]
 
 [project.urls]
@@ -35,3 +37,6 @@ dev = [
 
 [tool.mypy]
 ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"
