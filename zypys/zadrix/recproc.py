@@ -18,7 +18,9 @@ import csv
 import datetime
 import logging
 import re
+import shutil
 import subprocess
+import sys
 from itertools import starmap
 from pathlib import Path
 from typing import Tuple
@@ -73,9 +75,9 @@ def get_timelapses(directory: Path) -> list[Path]:
     return list(filter(is_timelapse, directory.iterdir()))
 
 
-# ------------------------------------------------------------------------------
-# Compressing.
-# ------------------------------------------------------------------------------
+###############################################################################
+#                                 Compressing                                 #
+###############################################################################
 
 
 def compress(in_file: Path, out_file: Path) -> int:
@@ -116,7 +118,7 @@ def compress_all(in_dir: Path, out_dir: Path, maxnum: int = 0) -> int:
     Compress maxnum recordings at most.  If maxnum is 0, compress all
     recordings.
 
-    Return 1 if interrupted, or 0 otherwise.
+    Return 130 if interrupted, or 0 otherwise.
     """
     in_files = get_recordings(in_dir)
     out_files = list(map(lambda in_file: out_dir.joinpath(in_file.name), in_files))
@@ -148,13 +150,13 @@ def compress_all(in_dir: Path, out_dir: Path, maxnum: int = 0) -> int:
                 print("")
             print("Compressing interrupted by Ctrl-C.")
             out_file.unlink(missing_ok=True)
-            return 1
+            return 130
     return 0
 
 
-# ------------------------------------------------------------------------------
-# Extracting.
-# ------------------------------------------------------------------------------
+###############################################################################
+#                                  Extracting                                 #
+###############################################################################
 
 
 def read_extract_txt(
@@ -183,7 +185,7 @@ def read_extract_txt(
                 title.append(line[3])
             return index, start, end, title
     except Exception:
-        logging.error('Failed to read "%s"', extract_txt)
+        logging.error('Failed to read "%s".', extract_txt)
         return [], [], [], []
 
 
@@ -257,7 +259,7 @@ def extract_all(in_dir: Path, out_dir: Path, maxnum: int = 0) -> int:
 
     Extract maxnum recordings at most.  If maxnum is 0, extract all recordings.
 
-    Return 1 if interrupted, or 0 otherwise.
+    Return 130 if interrupted, or 0 otherwise.
     """
     in_files, out_files, start, end = get_extract_jobs(in_dir, out_dir)
     if maxnum == 0:
@@ -289,9 +291,111 @@ def extract_all(in_dir: Path, out_dir: Path, maxnum: int = 0) -> int:
                 print("")
             print("Extracting interrupted by Ctrl-C.")
             out_file.unlink(missing_ok=True)
+            return 130
+    return 0
+
+
+###############################################################################
+#                               Copy Timelapses                               #
+###############################################################################
+
+
+def copy(in_file: Path, out_file: Path) -> int:
+    """Copy one timelapse to the destination."""
+    shutil.copyfile(in_file, out_file)
+    return 0
+
+
+def copy_all(in_dir: Path, out_dir: Path) -> int:
+    """Copy all timelapses from in_dir to out_dir, printing info.
+
+    Return 130 if interrupted, or 0 otherwise.
+    """
+    in_files = get_timelapses(in_dir)
+    print(f"{len(in_files)} timelapses found.")
+    for in_file in in_files:
+        out_file = out_dir.joinpath(in_file.name)
+        try:
+            copy(in_file, out_file)
+        except KeyboardInterrupt:
+            # When extracting is interrupted, delete the incomplete output file.
+            print("Copying interrupted by Ctrl-C.")
+            out_file.unlink(missing_ok=True)
+            return 130
+    print(f"{len(in_files)} timelapses copied.")
+    return 0
+
+
+###############################################################################
+#                            Command Line Interface                           #
+###############################################################################
+
+
+def cli():
+    """Command line interface of this module."""
+    import argparse
+
+    # Parse arguments.
+    parser = argparse.ArgumentParser(
+        description="Post-processor for Zadrix recordings and timelapses."
+    )
+    parser.add_argument(
+        "dir",
+        type=str,
+        default=".",
+        nargs="?",
+        help="directory where recordings reside.",
+    )
+    parser.add_argument(
+        "outdir",
+        type=str,
+        default="",
+        nargs="?",
+        help='directory to place result videos, defaults to "<dir>_archives"',
+    )
+    parser.add_argument(
+        "--maxnum",
+        type=int,
+        default=0,
+        help="maximum number of recordings to compress/extract",
+    )
+    args = parser.parse_args()
+
+    # Validate input and output directory.
+    in_dir = Path(args.dir).absolute()
+    if not in_dir.is_dir():
+        print(f'"{in_dir}" is not a valid directory.')
+        return 1
+    if args.outdir:
+        out_dir = Path(args.outdir).absolute()
+    else:
+        out_dir_name = in_dir.name + "_archives"
+        out_dir = in_dir.parent.joinpath(out_dir_name)
+    if not out_dir.is_dir():
+        if out_dir.is_file():
+            print(f'Output directory "{out_dir}" is a file!')
             return 1
+        try:
+            out_dir.mkdir()
+            print(f'Output directory "{out_dir}" created.')
+        except Exception as e:
+            print(e)
+            return 1
+
+    # Copy, compress and extract.
+    if copy_all(in_dir, out_dir) == 130:
+        return 130
+    if compress_all(in_dir, out_dir, maxnum=args.maxnum) == 130:
+        return 130
+    if extract_all(in_dir, out_dir, maxnum=args.maxnum) == 130:
+        return 130
     return 0
 
 
 if __name__ == "__main__":
-    pass
+    # Run the command line interface when called from command line, or some
+    # random script to play with if called interactively in a REPL.
+    if not hasattr(sys, "ps1"):
+        cli()
+    else:
+        pass
