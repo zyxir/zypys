@@ -315,6 +315,9 @@ def copy_all(in_dir: Path, out_dir: Path) -> int:
     print(f"{len(in_files)} timelapses found.")
     for in_file in in_files:
         out_file = out_dir.joinpath(in_file.name)
+        # Skip if output already exist.
+        if out_file.exists():
+            continue
         try:
             copy(in_file, out_file)
         except KeyboardInterrupt:
@@ -351,7 +354,7 @@ def cli():
         type=str,
         default="",
         nargs="?",
-        help='directory to place result videos, defaults to "<dir>_archives"',
+        help='directory to place result videos, defaults to "<dir>_archive"',
     )
     parser.add_argument(
         "--maxnum",
@@ -369,7 +372,7 @@ def cli():
     if args.outdir:
         out_dir = Path(args.outdir).absolute()
     else:
-        out_dir_name = in_dir.name + "_archives"
+        out_dir_name = in_dir.name + "_archive"
         out_dir = in_dir.parent.joinpath(out_dir_name)
     if not out_dir.is_dir():
         if out_dir.is_file():
