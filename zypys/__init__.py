@@ -1,1 +1,1 @@
-"""Zyxir 的自用 Python 腳本集。"""
+"""The interface of the Zypys package."""

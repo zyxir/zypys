@@ -33,7 +33,7 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://git.ustc.edu.cn/zyxir/berutils"
+"Homepage" = "https://github.com/zyxir/zypys"
 
 [tool.mypy]
 ignore_missing_imports = true
