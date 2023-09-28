@@ -32,28 +32,41 @@ def modified_time(path: Path) -> float:
         return 0
 
 
-def backup(game_path: Path, dirs: List[str], backup_path: Path):
-    """Backup directories under game path into a single archive."""
-    # Delete backup if already exists.
-    backup_path.unlink(missing_ok=True)
-    # Make the archive.
-    with zipfile.ZipFile(backup_path, "w", compression=zipfile.ZIP_LZMA) as zf:
+def make_archive(main_path: Path, dirs: List[str], archive_path: Path):
+    """Compress `dirs` in `main_path` into an archive."""
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_LZMA) as zf:
         # Add everything needed into the archive.
         for d in dirs:
-            subdir = game_path.joinpath(d)
+            subdir = main_path.joinpath(d)
             for path in subdir.glob("**/*"):
                 if path.is_file():
-                    relative_path = path.relative_to(game_path)
+                    relative_path = path.relative_to(main_path)
                     zf.write(path, arcname=relative_path)
+
+
+def backup(game_path: Path, dirs: List[str], backup_path: Path):
+    """Backup directories under game path into a single archive."""
+    # Rename backup if already exists.
+    if backup_path.exists():
+        new_name = backup_path.stem + "_old" + backup_path.suffix
+        new_path = backup_path.parent.joinpath(new_name)
+        new_path.unlink(missing_ok=True)
+        backup_path.rename(new_path)
+    # Make the archive.
+    make_archive(game_path, dirs, backup_path)
 
 
 def restore(game_path: Path, dirs: List[str], backup_path: Path):
     """Restore backup into the game path."""
-    # Delete relevant directories if already exists.
-    for d in dirs:
-        subdir = game_path.joinpath(d)
-        if subdir.exists():
-            shutil.rmtree(subdir)
+    # Backup relevant directories if already exists.
+    if any(map(lambda d: game_path.joinpath(d).exists, dirs)):
+        new_name = backup_path.stem + "_old" + backup_path.suffix
+        new_path = game_path.joinpath(new_name)
+        new_path.unlink(missing_ok=True)
+        make_archive(game_path, dirs, new_path)
+        for d in dirs:
+            subdir = game_path.joinpath(d)
+            shutil.rmtree(subdir, ignore_errors=True)
     # Restore the archive.
     with zipfile.ZipFile(backup_path, "r") as zf:
         zf.extractall(game_path)
@@ -94,7 +107,7 @@ def sync(game_path: Path, dirs: List[str], backup_path: Path) -> int:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    game_path = Path("c:/Program Files (x86)/World of Warcraft/_retail_/")
+    main_path = Path("c:/Program Files (x86)/World of Warcraft/_retail_/")
     dirs = ["Interface", "WTF"]
-    backup_path = Path("c:/Users/zyxir/Zybox/wowui.zip")
-    sync(game_path, dirs, backup_path)
+    archive_path = Path("c:/Users/zyxir/Zybox/wowui.zip")
+    sync(main_path, dirs, archive_path)
