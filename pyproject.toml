@@ -12,6 +12,8 @@ description = "A package of Zyxir's personal library and scripts."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+  "pynput",
+  "pywin32",
 ]
 
 classifiers = [
