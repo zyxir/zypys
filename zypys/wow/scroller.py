@@ -20,23 +20,35 @@ class ScrollerThread(threading.Thread):
         self.hWnd = None
         self.stop = False
 
-    def scroll(self, direction):
-        print(f"scroll {direction}")
+    def send_alt_g(self):
+        print("press Alt-G")
+        win32api.PostMessage(self.hWnd, win32con.WM_KEYDOWN, 0x12, 0)
+        win32api.PostMessage(self.hWnd, win32con.WM_KEYDOWN, 0x47, 0)
+        win32api.PostMessage(self.hWnd, win32con.WM_KEYUP, 0x47, 0)
+        win32api.PostMessage(self.hWnd, win32con.WM_KEYUP, 0x12, 0)
+
+    def scroll_down(self):
+        print("scroll down")
+        wheel_delta = -120 * max(1, random.gauss(3, 1))
+        win32api.PostMessage(self.hWnd, win32con.WM_MOUSEWHEEL, wheel_delta, 0)
+
+    def act(self):
         if self.hWnd is not None:
-            scroll_amount = (1 + abs(random.gauss(0, 1))) * 120
-            wheel_delta = scroll_amount if direction == "up" else -scroll_amount
-            win32api.SendMessage(self.hWnd, win32con.WM_MOUSEWHEEL, wheel_delta, 0)
+            if random.random() < 0.5:
+                self.scroll_down()
+            else:
+                self.send_alt_g()
+        else:
+            print("\rno available window, do not scroll.")
 
     def run(self):
-        direction = "up"
         while True:
             if self.stop:
                 return
-            sleep_time = max(0.2, random.gauss(0.5, 0.1))
+            sleep_time = max(0.01, random.gauss(0.4, 0.1))
             time.sleep(sleep_time)
             if self.state:
-                direction = "up" if direction == "down" else "down"
-                self.scroll(direction)
+                self.act()
 
 
 def start_listening():
