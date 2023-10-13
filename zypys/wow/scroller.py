@@ -23,7 +23,8 @@ class ScrollerThread(threading.Thread):
     def scroll(self, direction):
         print(f"scroll {direction}")
         if self.hWnd is not None:
-            wheel_delta = 1200 if direction == "up" else -1200
+            scroll_amount = max(1, random.gauss(0, 1)) * 120
+            wheel_delta = scroll_amount if direction == "up" else -scroll_amount
             win32api.SendMessage(self.hWnd, win32con.WM_MOUSEWHEEL, wheel_delta, 0)
 
     def run(self):
