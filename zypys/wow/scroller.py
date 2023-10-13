@@ -57,8 +57,7 @@ def start_listening():
     COMBINATIONS = [
         {
             "keys": [
-                {keyboard.Key.cmd, keyboard.KeyCode(char="a")},
-                {keyboard.Key.cmd, keyboard.KeyCode(char="A")},
+                {keyboard.Key.f8},
             ],
             "action": "toggle",
         },
