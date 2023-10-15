@@ -1,5 +1,5 @@
 """
-This module scrolls the mouse for me while playing World of Warcraft.
+This module automates key presses for me in World of Warcraft.
 
 It is toggled with a global shortcut.
 """
@@ -16,7 +16,7 @@ import win32gui
 class ScrollerThread(threading.Thread):
     def __init__(self):
         super().__init__()
-        self.state = False
+        self.state = ""
         self.hWnd = None
         self.stop = False
 
@@ -27,17 +27,20 @@ class ScrollerThread(threading.Thread):
         win32api.PostMessage(self.hWnd, win32con.WM_KEYUP, 0x47, 0)
         win32api.PostMessage(self.hWnd, win32con.WM_KEYUP, 0x12, 0)
 
-    def scroll_down(self):
-        print("scroll down")
-        wheel_delta = -120 * max(1, random.gauss(3, 1))
-        win32api.PostMessage(self.hWnd, win32con.WM_MOUSEWHEEL, wheel_delta, 0)
+    def send_g(self):
+        print("Press G")
+        win32api.PostMessage(self.hWnd, win32con.WM_KEYDOWN, 0x47, 0)
+        win32api.PostMessage(self.hWnd, win32con.WM_KEYUP, 0x47, 0)
 
     def act(self):
         if self.hWnd is not None:
-            if random.random() < 0.5:
-                self.scroll_down()
-            else:
-                self.send_alt_g()
+            if self.state == "mode1":
+                self.send_g()
+            elif self.state == "mode2":
+                if random.random() < 0.8:
+                    self.send_g()
+                else:
+                    self.send_alt_g()
         else:
             print("\rno available window, do not scroll.")
 
@@ -45,7 +48,7 @@ class ScrollerThread(threading.Thread):
         while True:
             if self.stop:
                 return
-            sleep_time = max(0.01, random.gauss(0.4, 0.1))
+            sleep_time = max(0.1, random.gauss(0.3, 0.1))
             time.sleep(sleep_time)
             if self.state:
                 self.act()
@@ -57,9 +60,15 @@ def start_listening():
     COMBINATIONS = [
         {
             "keys": [
+                {keyboard.Key.f7},
+            ],
+            "action": "mode1",
+        },
+        {
+            "keys": [
                 {keyboard.Key.f8},
             ],
-            "action": "toggle",
+            "action": "mode2",
         },
         {
             "keys": [
@@ -83,15 +92,18 @@ def start_listening():
                     if action == "quit":
                         scroller_thread.stop = True
                         return False
-                    elif action == "toggle":
+                    elif action != "":
                         hWnd = win32gui.GetForegroundWindow()
                         if hWnd == scroller_thread.hWnd:
                             print("toggled")
-                            scroller_thread.state = not scroller_thread.state
+                            if scroller_thread.state:
+                                scroller_thread.state = ""
+                            else:
+                                scroller_thread.state = action
                         else:
-                            print(f"window changed to {hWnd}")
+                            print(f"window changed to {hWnd}, using {action}")
                             scroller_thread.hWnd = hWnd
-                            scroller_thread.state = True
+                            scroller_thread.state = action
 
     def on_release(key):
         if key in pressed:
