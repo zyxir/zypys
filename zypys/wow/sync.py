@@ -5,11 +5,13 @@ It compares the last modified time of my local game settings with the cloud
 backup, and do backup or restoration based on which one is newer.
 """
 
+import logging
 import shutil
 import zipfile
 from pathlib import Path
-import logging
 from typing import List
+
+import tqdm
 
 
 def _modified_time(path: Path) -> float:
@@ -38,10 +40,14 @@ def make_archive(main_path: Path, dirs: List[str], archive_path: Path):
         # Add everything needed into the archive.
         for d in dirs:
             subdir = main_path.joinpath(d)
-            for path in subdir.glob("**/*"):
-                if path.is_file():
-                    relative_path = path.relative_to(main_path)
-                    zf.write(path, arcname=relative_path)
+            paths = subdir.glob("**/*")
+            path_sizes = map(lambda p: p.stat().st_size, paths)
+            with tqdm(total=sum(path_sizes)) as pbar:
+                for path, size in zip(paths, path_sizes):
+                    if path.is_file():
+                        relative_path = path.relative_to(main_path)
+                        zf.write(path, arcname=relative_path)
+                        pbar.update(size)
 
 
 def backup(game_path: Path, dirs: List[str], backup_path: Path):
@@ -76,7 +82,7 @@ def sync(game_path: Path, dirs: List[str], backup_path: Path) -> int:
     """Do backup or restore based on modified time."""
     # Check for game path.
     if not game_path.exists():
-        logging.error(f"Game path \"{game_path}\" does not exist!")
+        logging.error(f'Game path "{game_path}" does not exist!')
         return 1
     # Decide an action.
     if not backup_path.exists():

@@ -35,7 +35,7 @@ class ScrollerThread(threading.Thread):
     def act(self):
         if self.hWnd is not None:
             if self.state == "mode1":
-                self.send_g()
+                self.send_alt_g()
             elif self.state == "mode2":
                 if random.random() < 0.8:
                     self.send_g()
@@ -72,8 +72,7 @@ def start_listening():
         },
         {
             "keys": [
-                {keyboard.Key.cmd, keyboard.KeyCode(char="q")},
-                {keyboard.Key.cmd, keyboard.KeyCode(char="Q")},
+                {keyboard.Key.cmd, keyboard.Key.f8},
             ],
             "action": "quit",
         },
@@ -95,7 +94,7 @@ def start_listening():
                     elif action != "":
                         hWnd = win32gui.GetForegroundWindow()
                         if hWnd == scroller_thread.hWnd:
-                            print("toggled")
+                            print(f"toggled ({action})")
                             if scroller_thread.state:
                                 scroller_thread.state = ""
                             else:
