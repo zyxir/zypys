@@ -11,7 +11,7 @@ import zipfile
 from pathlib import Path
 from typing import List
 
-import tqdm
+from tqdm import tqdm
 
 
 def _modified_time(path: Path) -> float:
