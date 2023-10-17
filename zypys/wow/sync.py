@@ -9,7 +9,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 def get_mtime(p: Path) -> float:
@@ -24,45 +24,49 @@ def get_mtime(p: Path) -> float:
         return 0
 
 
+def run_cmd(cmd: str, cwd: Optional[Path] = None) -> int:
+    """Run command `cmd` in `cwd`."""
+    # Verify the command.
+    cmd_list = cmd.split(" ")
+    if len(cmd_list) < 1:
+        print(f"Command \"{cmd}\" is incomplete.")
+        return 1
+    prog = cmd_list[0]
+    if not shutil.which(prog):
+        print(f"Cannot find \"{prog}\".")
+        return 2
+    # Change directory.
+    if cwd is not None:
+        orig_dir = os.getcwd()
+        os.chdir(cwd)
+    # Run the process.
+    process = subprocess.Popen(
+        cmd_list,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    return_code = process.wait()
+    if process.stdout:
+        for line in process.stdout:
+            print(f"[{prog}] {line}", end="")
+    # Finishing up.
+    if cwd is not None:
+        os.chdir(orig_dir)
+    return return_code
+
+
 def compress(main_path: Path, dirs: List[str], archive_path: Path):
-    """Compress `dirs` in `main_path` into `archive_path`.
-
-    This requires that one of "7-zip" or "NanaZip" is installed.
-    """
-    # Change directory.
-    orig_dir = os.getcwd()
-    os.chdir(main_path)
-    # Compress with the "7z" command.
-    cmd = ["7z", "a", "-t7z", str(archive_path)] + dirs
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True
-    )
-    stdout = proc.stdout
-    if stdout is not None:
-        for line in stdout:
-            print(f"[7z] {line}")
-    proc.wait()
-    # Return to the original directory.
-    os.chdir(orig_dir)
+    """Compress `dirs` in `main_path` into `archive_path`."""
+    dirs_str = " ".join(dirs)
+    cmd = f"7z a -t7z {archive_path} {dirs_str}"
+    run_cmd(cmd, main_path)
 
 
-def extract(archive_path: Path, main_path: Path):
-    """Extract compressed archive `archive_path` to `main_path`."""
-    # Change directory.
-    orig_dir = os.getcwd()
-    os.chdir(main_path)
-    # Extract with the "7z" command.
-    cmd = ["7z", "x", str(archive_path)]
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True
-    )
-    stdout = proc.stdout
-    if stdout is not None:
-        for line in stdout:
-            print(f"[7z] {line}", end="")
-    proc.wait()
-    # Return to the original directory.
-    os.chdir(orig_dir)
+def extract(archive_path, main_path):
+    """Extract `archive_path` into `main_path`."""
+    cmd = f"7z x {archive_path}"
+    run_cmd(cmd, main_path)
 
 
 def backup(game_path: Path, dirs: List[str], backup_path: Path):
@@ -144,5 +148,5 @@ def sync(game_path: Path, dirs: List[str], backup_path: Path) -> int:
 if __name__ == "__main__":
     main_path = Path("c:/Program Files (x86)/World of Warcraft/_retail_/")
     dirs = ["Interface", "WTF"]
-    archive_path = Path("c:/Users/zyxir/Zybox/wowui.zip")
+    archive_path = Path("c:/Users/zyxir/Zybox/wowui.7z")
     sync(main_path, dirs, archive_path)
