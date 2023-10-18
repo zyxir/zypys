@@ -7,6 +7,7 @@ backup, and do backup or restoration based on which one is newer.
 
 import os
 import shutil
+import shlex
 import subprocess
 from pathlib import Path
 from typing import List, Optional
@@ -27,7 +28,7 @@ def get_mtime(p: Path) -> float:
 def run_cmd(cmd: str, cwd: Optional[Path] = None) -> int:
     """Run command `cmd` in `cwd`."""
     # Verify the command.
-    cmd_list = cmd.split(" ")
+    cmd_list = shlex.split(cmd)
     if len(cmd_list) < 1:
         print(f"Command \"{cmd}\" is incomplete.")
         return 1
@@ -58,14 +59,16 @@ def run_cmd(cmd: str, cwd: Optional[Path] = None) -> int:
 
 def compress(main_path: Path, dirs: List[str], archive_path: Path):
     """Compress `dirs` in `main_path` into `archive_path`."""
-    dirs_str = " ".join(dirs)
-    cmd = f"7z a -t7z {archive_path} {dirs_str}"
+    dirs_str = " ".join(map(shlex.quote, dirs))
+    archive = shlex.quote(str(archive_path))
+    cmd = f"7z a -t7z {archive} {dirs_str}"
     run_cmd(cmd, main_path)
 
 
 def extract(archive_path, main_path):
     """Extract `archive_path` into `main_path`."""
-    cmd = f"7z x {archive_path}"
+    archive = shlex.quote(str(archive_path))
+    cmd = f"7z x {archive}"
     run_cmd(cmd, main_path)
 
 
@@ -89,6 +92,7 @@ def restore(game_path: Path, dirs: List[str], backup_path: Path):
         new_name = backup_path.stem + "_old" + backup_path.suffix
         new_path = game_path.joinpath(new_name)
         new_path.unlink(missing_ok=True)
+        dirs = list(filter(lambda d: game_path.joinpath(d).exists(), dirs))
         compress(game_path, dirs, new_path)
         for d in dirs:
             subdir = game_path.joinpath(d)
