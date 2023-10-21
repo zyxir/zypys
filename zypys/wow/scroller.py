@@ -37,7 +37,7 @@ class ScrollerThread(threading.Thread):
             if self.state == "mode1":
                 self.send_alt_g()
             elif self.state == "mode2":
-                if random.random() < 0.8:
+                if random.random() < 0.7:
                     self.send_g()
                 else:
                     self.send_alt_g()
@@ -48,7 +48,7 @@ class ScrollerThread(threading.Thread):
         while True:
             if self.stop:
                 return
-            sleep_time = max(0.1, random.gauss(0.3, 0.1))
+            sleep_time = max(0.2, random.gauss(0.5, 0.1))
             time.sleep(sleep_time)
             if self.state:
                 self.act()
@@ -72,7 +72,7 @@ def start_listening():
         },
         {
             "keys": [
-                {keyboard.Key.cmd, keyboard.Key.f8},
+                {keyboard.Key.f6},
             ],
             "action": "quit",
         },
