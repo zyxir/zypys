@@ -37,10 +37,7 @@ class ScrollerThread(threading.Thread):
             if self.state == "mode1":
                 self.send_alt_g()
             elif self.state == "mode2":
-                if random.random() < 0.7:
-                    self.send_g()
-                else:
-                    self.send_alt_g()
+                self.send_g()
         else:
             print("\rno available window, do not scroll.")
 
@@ -48,7 +45,7 @@ class ScrollerThread(threading.Thread):
         while True:
             if self.stop:
                 return
-            sleep_time = max(0.2, random.gauss(0.5, 0.1))
+            sleep_time = max(0.7, random.gauss(1.0, 0.1))
             time.sleep(sleep_time)
             if self.state:
                 self.act()
