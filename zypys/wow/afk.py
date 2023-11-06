@@ -24,6 +24,23 @@ class Mode(enum.StrEnum):
     PRESS_ALT_G = "Pressing Alt-G"
 
 
+class Printer:
+    def __init__(self):
+        self.lastMsg: Optional[str] = None
+        self.lastRepeat: int = 0
+
+    def printMsg(self, msg: str):
+        if msg == self.lastMsg:
+            self.lastRepeat += 1
+            print(f"\u001b[1F\u001b[0K{msg} (x{self.lastRepeat})")
+        else:
+            self.lastMsg = msg
+            self.lastRepeat = 1
+            print(msg)
+
+printMsg = Printer().printMsg
+
+
 class PresserThread(threading.Thread):
     def __init__(self):
         super().__init__()
@@ -31,18 +48,24 @@ class PresserThread(threading.Thread):
         self.hwnd: Optional[int] = None
         self.stop: bool = False
 
+    def wait(self):
+        sleep_time = max(0.03, random.gauss(0.06, 0.01))
+        time.sleep(sleep_time)
+
     def send_alt_g(self):
         if self.hwnd:
-            print("press Alt-G")
+            printMsg("press Alt-G")
             win32api.PostMessage(self.hwnd, win32con.WM_KEYDOWN, 0x12, 0)
             win32api.PostMessage(self.hwnd, win32con.WM_KEYDOWN, 0x47, 0)
+            self.wait()
             win32api.PostMessage(self.hwnd, win32con.WM_KEYUP, 0x47, 0)
             win32api.PostMessage(self.hwnd, win32con.WM_KEYUP, 0x12, 0)
 
     def send_g(self):
         if self.hwnd:
-            print("Press G")
+            printMsg("Press G")
             win32api.PostMessage(self.hwnd, win32con.WM_KEYDOWN, 0x47, 0)
+            self.wait()
             win32api.PostMessage(self.hwnd, win32con.WM_KEYUP, 0x47, 0)
 
     def act(self):
@@ -52,11 +75,11 @@ class PresserThread(threading.Thread):
             elif self.mode == Mode.PRESS_ALT_G:
                 self.send_alt_g()
         except Exception as e:
-            print("The following exception was encountered:")
-            print("----------------------------------------")
-            print(e)
-            print("----------------------------------------")
-            print("Pausing the script.")
+            printMsg("The following exception was encountered:")
+            printMsg("----------------------------------------")
+            printMsg(f"{e}")
+            printMsg("----------------------------------------")
+            printMsg("Pausing the script.")
             self.mode = Mode.PAUSE
             self.hwnd = None
 
@@ -71,9 +94,8 @@ class PresserThread(threading.Thread):
 
 def start_listening():
     """Start listening for shortcut."""
-
+    printMsg("Start listening...")
     pressed = set()
-
     COMBINATIONS = [
         {
             "keys": [
@@ -110,18 +132,19 @@ def start_listening():
     def dispatch(action: Union[str, Mode]) -> Optional[bool]:
         if action == "quit":
             presser_thread.stop = True
+            printMsg("Quit")
             raise keyboard.Listener.StopException
         elif isinstance(action, Mode):
             hwnd = win32gui.GetForegroundWindow()
             if hwnd == presser_thread.hwnd:
                 if presser_thread.mode != Mode.PAUSE:
-                    print("Pause")
+                    printMsg("Pause")
                     presser_thread.mode = Mode.PAUSE
                 else:
-                    print(f"Turn on mode \"{action}\"")
+                    printMsg(f"Turn on mode \"{action}\"")
                     presser_thread.mode = action
             else:
-                print(f"Window changed to {hwnd}, using mode \"{action}\"")
+                printMsg(f"Window changed to {hwnd}, using mode \"{action}\"")
                 presser_thread.hwnd = hwnd
                 presser_thread.mode = action
 
