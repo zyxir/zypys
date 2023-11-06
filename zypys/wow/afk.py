@@ -18,7 +18,7 @@ import win32con
 import win32gui
 
 
-class Mode(enum.StrEnum):
+class Mode(enum.Enum):
     PAUSE = "Paused"
     PRESS_G = "Pressing G"
     PRESS_ALT_G = "Pressing Alt-G"
