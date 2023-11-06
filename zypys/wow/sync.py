@@ -37,8 +37,8 @@ def run_cmd(cmd: str, cwd: Optional[Path] = None) -> int:
         print(f"Cannot find \"{prog}\".")
         return 2
     # Change directory.
+    orig_dir = os.getcwd()
     if cwd is not None:
-        orig_dir = os.getcwd()
         os.chdir(cwd)
     # Run the process.
     process = subprocess.Popen(
